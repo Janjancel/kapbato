@@ -24,7 +24,7 @@ from .views import (
     demolition_count, 
     sell_count,
     demolition_list, sell_list, get_sell_requests, get_demolish_requests, get_accounts, toggle_account_status, delete_account, get_analytics, get_antiques, add_to_cart, get_cart_count,
-    CartView, CartItemUpdateView, delete_cart_item, cart_count
+    CartView, CartItemUpdateView, delete_cart_item, CartCountView
 )
 
 urlpatterns = [
@@ -53,11 +53,12 @@ urlpatterns = [
     path("api/analytics/", get_analytics, name="get_analytics"),
     path("antiques/", get_antiques, name="get_antiques"),
     path("api/cart/add/", add_to_cart, name="add_to_cart"), 
-    path("cart/count/", get_cart_count, name="cart-count"),
+    # path("cart/count/", get_cart_count, name="cart-count"),
+    path('api/cart/count/', CartCountView.as_view(), name='cart-count'),
     path('api/cart/', CartView.as_view(), name='cart'),
     path("cart/<int:item_id>/", CartItemUpdateView.as_view(), name="cart-item-update"),
     path("api/cart/item/<int:item_id>/", delete_cart_item, name="delete_cart_item"),
-    path("cart/count/", cart_count, name="cart-count"), 
+    # path("cart/count/", cart_count, name="cart-count"), 
 
 
 ]

@@ -16,6 +16,8 @@ from ..serializers import CartSerializer
 
 # ------------------ Add to Cart ------------------
 
+from django.db.models import Sum  # ✅ Import Sum for aggregation
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_to_cart(request):
@@ -38,25 +40,46 @@ def add_to_cart(request):
             cart_item.quantity += quantity
             cart_item.save()  # ✅ Ensure item is updated
 
-        # ✅ Return updated cart count
-        total_items = cart.items.aggregate(total_quantity=CartItem.Sum("quantity"))["total_quantity"] or 0
-        return Response({"message": "Item added to cart", "total_items": total_items}, status=status.HTTP_201_CREATED)
+        # ✅ Return updated cart count correctly using Sum
+        total_items = cart.items.aggregate(total_quantity=Sum("quantity"))["total_quantity"] or 0
+
+        return Response(
+            {"message": "Item added to cart", "total_items": total_items},
+            status=status.HTTP_201_CREATED
+        )
 
     except Antique.DoesNotExist:
         return Response({"error": "Antique not found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
+        import traceback
+        traceback.print_exc()  # ✅ Logs full error in console
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
 # ------------------ Get Cart Count ------------------
+
+# @api_view(["GET"])
+# @permission_classes([IsAuthenticated])
+# def get_cart_count(request):
+#     """Get total number of items in the user's cart."""
+#     cart = Cart.objects.filter(user=request.user).first()
+#     total_items = cart.items.aggregate(total_quantity=CartItem.Sum("quantity"))["total_quantity"] or 0
+#     return Response({"total_items": total_items}, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_cart_count(request):
     """Get total number of items in the user's cart."""
     cart = Cart.objects.filter(user=request.user).first()
-    total_items = cart.items.aggregate(total_quantity=CartItem.Sum("quantity"))["total_quantity"] or 0
+    if not cart:
+        return Response({"total_items": 0}, status=status.HTTP_200_OK)
+
+    # Sum the quantities of all items in the user's cart
+    total_items = sum(item.quantity for item in cart.items.all())  # or use aggregate for better performance if needed
     return Response({"total_items": total_items}, status=status.HTTP_200_OK)
+
+
 
 
 @login_required
@@ -65,6 +88,22 @@ def cart_count(request):
     cart = Cart.objects.filter(user=request.user).first()
     total_items = cart.items.aggregate(total_quantity=CartItem.Sum("quantity"))["total_quantity"] or 0
     return JsonResponse({"total_items": total_items}, status=200)
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from ..models import Cart
+
+class CartCountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        cart = Cart.objects.get(user=user)
+        total_items = sum(item.quantity for item in cart.items.all())
+        return Response({'total_items': total_items})
+
 
 
 # ------------------ Retrieve Cart Details ------------------
